@@ -1,0 +1,46 @@
+name: windows
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build_test:
+    name: '${{matrix.bd}} (Windows)'
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        bd: ["cpp", "c"]
+
+    steps:
+    # Git repo set up
+    - name: Checkout commit
+      uses: actions/checkout@v2
+
+    # Install dependencies
+    - name: Set up Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.12.1
+      with:
+        arch: x64
+
+    # Build
+    - name: Build Test Bed
+      working-directory: ${{runner.workspace}}
+      run: |
+        cmake -E make_directory ${{github.workspace}}\build
+        cd ${{github.workspace}}\build
+        cmake -D CMAKE_BUILD_TYPE=DEBUG -A x64 -T host=x64 ..
+        cmake --build . --target ${{matrix.bd}}_test
+      env:
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+
+    # Run unit tests
+    - name: Run tests
+      run: |
+        & ${{github.workspace}}\build\${{matrix.bd}}\Debug\${{matrix.bd}}_test.exe

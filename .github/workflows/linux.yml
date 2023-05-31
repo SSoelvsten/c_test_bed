@@ -1,0 +1,64 @@
+name: linux
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build_cpp:
+    name: '${{matrix.bd}} (Linux, ${{matrix.cc.cc}}-${{matrix.cc.v}})'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        bd: ["cpp", "c"]
+        cc:
+          # GNU Compiler
+          - { cc: gcc,   v: 10, cxx: g++ } # oldest possible
+          - { cc: gcc,   v: 11, cxx: g++ } # default
+          - { cc: gcc,   v: 12, cxx: g++ } # newest
+
+          # Clang Compiler
+          - { cc: clang, v: 11, cxx: clang++ } # oldest possible
+          - { cc: clang, v: 14, cxx: clang++ } # default
+          - { cc: clang, v: 15, cxx: clang++ } # newest possible
+
+    env:
+      cc: ${{matrix.cc.cc}}-${{matrix.cc.v}}
+      cxx: ${{matrix.cc.cxx}}-${{matrix.cc.v}}
+
+    steps:
+    - name: Checkout commit
+      uses: actions/checkout@v2
+
+    - name: Install compiler
+      run: |
+        sudo apt update
+
+        echo "================================"
+        echo "Compiler"
+        sudo apt install build-essential
+        sudo apt install ${{matrix.cc.cc}}-${{matrix.cc.v}}
+
+    - name: Build Test Bed
+      working-directory: ${{runner.workspace}}
+      run: |
+        export CC=${{env.cc}}
+        if [ "${{ matrix.cc.cc }}" != "gcc" ] ;
+        then
+          export CXX=${{env.cxx}}
+        fi
+
+        cmake -E make_directory ${{github.workspace}}/build
+        cd ${{github.workspace}}/build
+        cmake ..
+        cmake --build . --target ${{matrix.bd}}_test
+
+    - name: Run Test Bed
+      working-directory: ${{github.workspace}}/build
+      run: ./${{matrix.bd}}/${{matrix.bd}}_test

@@ -1,0 +1,74 @@
+name: macOS
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build_test:
+    name: '${{matrix.bd}} (Mac OS, ${{matrix.cc.cc}}@${{matrix.cc.v || matrix.cc.xcode}})'
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        bd: ["cpp", "c"]
+        cc:
+          # GNU Compiler
+          - { cc: gcc,   v: 7,  cxx: g++, xcode: latest }
+          - { cc: gcc,   v: 10, cxx: g++, xcode: latest }
+          - { cc: gcc,   v: 12, cxx: g++, xcode: latest }
+
+          # Clang Compiler
+          - { cc: clang, cxx: clang++, xcode: 13.1 } # oldest
+          - { cc: clang, cxx: clang++, xcode: 13.4 }
+          - { cc: clang, cxx: clang++, xcode: 14.0 }
+          - { cc: clang, cxx: clang++, xcode: 14.2 } # newest
+
+    steps:
+    # Git repo set up
+    - name: Checkout commit
+      uses: actions/checkout@v2
+
+    # Install dependencies
+    - name: Install xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: ${{matrix.cc.xcode}}
+
+    - name: Install dependencies
+      run: |
+        brew update
+
+        if ["${{matrix.cc.cc}}" == "gcc"];
+        then
+          echo "================================"
+          echo "Compiler"
+          brew install ${{matrix.cc.cc}}@${{matrix.cc.v}}
+        fi
+
+    # CMake build and run
+    - name: Build Test Bed
+      working-directory: ${{runner.workspace}}
+      run: |
+        if [ "${{ matrix.cc.cc }}" == "gcc" ] ;
+        then
+          export CC=/usr/bin/${{matrix.cc.cc}}
+          export CXX=/usr/bin/${{matrix.cc.cxx}}
+        else
+          export CC=${{matrix.cc.cc}}
+          export CXX=${{matrix.cc.cxx}}
+        fi
+
+        cmake -E make_directory ${{github.workspace}}/build
+        cd ${{github.workspace}}/build
+        cmake  ..
+        cmake --build . --target ${{matrix.bd}}_test
+
+    - name: Run Test Bed
+      working-directory: ${{github.workspace}}/build
+      run: ./${{matrix.bd}}/${{matrix.bd}}_test
