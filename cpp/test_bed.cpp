@@ -3,22 +3,24 @@
 
 class A
 {
-  friend class B;
-
-private:
-  int a1;
-  int a2;
+public:
+  int calls = 0;
+  int latest_val = 0;
 
 public:
-  A(int arg_1, int arg_2)
-    : a1(arg_1), a2(arg_2)
-  { }
+  A() { }
+
+  void operator() (int a)
+  {
+    calls++;
+    latest_val = a;
+  }
 
 public:
   std::string to_string() const
   {
     std::stringstream ss;
-    ss << "A(" << a1 << "," << a2 << ")";
+    calls == 0 ? ss << "A(_)" : ss << "A(" << latest_val << ")";
     return ss.str();
   }
 };
@@ -26,20 +28,20 @@ public:
 std::ostream& operator<< (std::ostream& os, const A &a)
 { return os << a.to_string(); }
 
-
+template<typename callback_t>
 class B
 {
 private:
-  A& a;
+  callback_t& __callback;
 
 public:
-  B(A& arg) : a(arg)
+  B(callback_t& cb) : __callback(cb)
   { }
 
 public:
   void go()
   {
-    a.a2 = 2 * a.a2;
+    __callback(42);
   }
 };
 
@@ -48,7 +50,7 @@ int main(int argc, char* argv[]) {
   {
     // ===== Your code starts here =====
 
-    A a(42,21);
+    A a;
     std::cout << a << std::endl;
     B b(a);
     b.go();
