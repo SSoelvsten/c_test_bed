@@ -28,20 +28,20 @@ public:
 std::ostream& operator<< (std::ostream& os, const A &a)
 { return os << a.to_string(); }
 
-template<typename callback_t>
+template<typename tralala_t>
 class B
 {
 private:
-  callback_t& __callback;
+  tralala_t& __tralala;
 
 public:
-  B(callback_t& cb) : __callback(cb)
+  B(tralala_t& cb) : __tralala(cb)
   { }
 
 public:
   void go()
   {
-    __callback(42);
+    __tralala(42);
   }
 };
 
